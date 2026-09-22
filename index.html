@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC Java Master Class</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        shake: { '0%, 100%': { transform: 'translateX(0)' }, '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-8px)' }, '20%, 40%, 60%, 80%': { transform: 'translateX(8px)' } },
+                        pop: { '0%': { transform: 'scale(0.95)' }, '50%': { transform: 'scale(1.05)' }, '100%': { transform: 'scale(1)' } },
+                        spinSlow: { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+                        spinSlowReverse: { '0%': { transform: 'rotate(360deg)' }, '100%': { transform: 'rotate(0deg)' } },
+                        bob: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-15px)' } },
+                        robotHappy: { '0%, 100%': { transform: 'translateY(0) scale(1)' }, '50%': { transform: 'translateY(-40px) scale(1.2)' } },
+                        robotFall: { '0%': { transform: 'translateY(0) rotate(0deg)', opacity: 1 }, '100%': { transform: 'translateY(150vh) rotate(180deg)', opacity: 0 } },
+                        thunder: { '0%, 100%': { opacity: 0 }, '10%, 30%': { opacity: 0.8 }, '20%, 40%': { opacity: 0.2 } },
+                        scanLine: { '0%': { top: '-10%' }, '100%': { top: '110%' } }
+                    },
+                    animation: {
+                        shake: 'shake 0.5s ease-in-out', pop: 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        spinSlow: 'spinSlow 40s linear infinite', spinSlowReverse: 'spinSlowReverse 50s linear infinite',
+                        bob: 'bob 3s ease-in-out infinite', robotHappy: 'robotHappy 0.4s ease-in-out infinite',
+                        robotFall: 'robotFall 1s ease-in forwards', thunder: 'thunder 0.6s ease-out',
+                        scanLine: 'scanLine 6s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            /* FIXED DARK & SKY BLUE THEME */
+            --t-bg: #0B1120; /* Very Dark Slate */
+            --t-grid: rgba(56, 189, 248, 0.08);
+            --t-main: #38BDF8; /* Sky Blue */
+            --t-main-glow: rgba(56, 189, 248, 0.4);
+            --t-main-dark: #0369A1; /* Dark Sky Blue */
+            --t-text: #F8FAFC;
+        }
+
+        .hidden-element { display: none !important; }
+        
+        body { 
+            font-family: 'Consolas', 'Courier New', monospace; 
+            background-color: var(--t-bg); color: var(--t-text); overflow-x: hidden; min-height: 100vh; 
+            background-image: 
+                linear-gradient(var(--t-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--t-grid) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .scanner { width: 100%; height: 2px; background: var(--t-main-glow); box-shadow: 0 0 20px 5px var(--t-main-glow); position: fixed; z-index: -1; pointer-events: none;}
+        .gear-bg { position: fixed; font-size: 60rem; color: var(--t-grid); z-index: -2; pointer-events: none; line-height: 1; text-shadow: 0 0 50px var(--t-grid);}
+        #thunder-overlay { position: fixed; inset: 0; background-color: #E0F2FE; z-index: 40; pointer-events: none; mix-blend-mode: overlay; opacity: 0; }
+
+        .dash-card {
+            background: rgba(2, 6, 23, 0.8); border: 1px solid rgba(255,255,255,0.1); 
+            border-left: 4px solid var(--t-main); border-radius: 8px; padding: 15px;
+            cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .dash-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px var(--t-main-glow); border-color: var(--t-main); }
+        .dash-card:active { transform: translateY(0); }
+
+        .path-line { position: absolute; width: 4px; background-color: var(--t-main); z-index: 0; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px var(--t-main); top: 20px; bottom: 20px;}
+        
+        .level-node {
+            width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; position: relative; z-index: 10;
+            background: rgba(2, 6, 23, 0.9); border: 2px solid var(--t-main-dark);
+            box-shadow: 0 5px 0 var(--t-main-dark); transition: all 0.1s;
+        }
+        .level-node.completed { border-color: var(--t-main); background: var(--t-main-dark); color: white; box-shadow: 0 5px 0 var(--t-main); text-shadow: 0 0 10px white;}
+        .level-node.active { border-color: var(--t-main); background: var(--t-main); color: #000; box-shadow: 0 5px 0 #ffffff, 0 0 20px var(--t-main); transform: scale(1.1); cursor: pointer;}
+        .level-node.active:active { box-shadow: 0 0px 0 #ffffff, 0 0 20px var(--t-main); transform: scale(1.1) translateY(5px); }
+        .level-node.locked { border-color: #1E293B; background: #0F172A; color: #475569; box-shadow: 0 5px 0 #020617; opacity: 0.7;}
+
+        .btn-sys { border-bottom-width: 4px; transition: all 0.1s; background-color: var(--t-main); border-color: var(--t-main-dark); color: #000;}
+        .btn-sys:active:not(:disabled) { border-bottom-width: 0px; transform: translateY(4px); }
+        
+        .btn-scenario { background: rgba(2, 6, 23, 0.8); border: 1px solid var(--t-main); border-left-width: 4px; transition: all 0.1s; box-shadow: 0 0 10px var(--t-grid); }
+        .btn-scenario:hover:not(:disabled) { background: var(--t-main-glow); box-shadow: 0 0 15px var(--t-main-glow); }
+
+        .glass-card { background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(12px); border: 1px solid #1E293B; box-shadow: 0 0 40px rgba(0,0,0,0.9), inset 0 0 20px var(--t-grid); }
+
+        .word-block { background-color: #0F172A; color: var(--t-main); font-weight: bold; font-size: 1.1rem; font-family: sans-serif; padding: 10px 18px; border-radius: 4px; cursor: pointer; border: 1px solid var(--t-main); box-shadow: 0 0 8px var(--t-grid); transition: all 0.1s; display: inline-block; margin: 6px; }
+        .word-block:hover { background-color: var(--t-main-glow); }
+        .word-block:active { transform: scale(0.95); }
+        .word-block.used { background-color: #020617; color: #1E293B; border-color: #1E293B; box-shadow: none; cursor: default; }
+        
+        .answer-zone { min-height: 80px; border-bottom: 1px solid #1E293B; display: flex; flex-wrap: wrap; align-items: center; padding: 10px 0; gap: 10px; }
+        
+        .chat-bubble-boss { background: rgba(255, 255, 255, 0.05); padding: 12px 18px; border-radius: 0 16px 16px 16px; max-width: 80%; border: 1px solid rgba(255,255,255, 0.1); margin-bottom: 12px;}
+        .chat-bubble-user { background: var(--t-main-glow); padding: 12px 18px; border-radius: 16px 0 16px 16px; max-width: 80%; align-self: flex-end; border: 1px solid var(--t-main); margin-bottom: 12px; font-family: sans-serif; color: #fff;}
+
+        #robot-mascot { text-shadow: 0 0 20px var(--t-main); }
+    </style>
+</head>
+<body class="pb-20 relative">
+
+    <div class="scanner animate-scanLine"></div>
+    <div class="gear-bg animate-spinSlow" style="top: -20vh; left: -20vw;">⚙️</div>
+    <div class="gear-bg animate-spinSlowReverse" style="bottom: -30vh; right: -20vw; font-size: 80rem;">⚙️</div>
+    <div id="thunder-overlay"></div>
+
+    <div id="robot-mascot" class="fixed right-6 bottom-10 text-[5rem] z-50 animate-bob transition-all duration-300 pointer-events-none">🤖</div>
+
+    <nav class="glass-card p-4 sticky top-0 z-40 border-b border-[#1E293B]">
+        <div class="max-w-4xl mx-auto flex justify-between items-center font-bold">
+            <button onclick="showDashboard()" id="back-btn" class="hidden-element text-slate-400 hover:text-white flex items-center transition-colors">
+                <span class="text-2xl mr-2">⬅️</span> BACK
+            </button>
+            <div id="nav-title" class="text-xl text-white font-black tracking-widest uppercase flex items-center" style="color: var(--t-main);">
+                <span class="mr-2 animate-pulse text-white">🔴</span> SOC TERMINAL
+            </div>
+            <div class="flex items-center text-white bg-black/50 px-4 py-1 rounded border border-[#1E293B]" style="color: var(--t-main);">
+                <span class="mr-2">⚡</span> <span id="total-xp-display">0</span> XP
+            </div>
+        </div>
+    </nav>
+
+    <!-- VIEW 1: DASHBOARD -->
+    <main id="dashboard-view" class="max-w-4xl mx-auto p-4 mt-8 relative z-10">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black text-white tracking-widest mb-2" style="text-shadow: 0 0 15px var(--t-main);">SELECT MODULE</h1>
+            <p class="text-slate-400">Initialize a training sequence.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="options-container"></div>
+    </main>
+
+    <!-- VIEW 2: LEVEL PATH -->
+    <main id="path-view" class="max-w-xl mx-auto p-4 mt-4 relative flex flex-col items-center z-10 hidden-element">
+        <div class="bg-black/80 px-6 py-2 rounded text-white font-bold tracking-widest mb-8 border border-[#1E293B] text-center uppercase" style="color: var(--t-main); box-shadow: 0 0 20px var(--t-main-glow);">
+            MODULE: <span id="path-module-title"></span><br>
+            <span class="text-xs text-slate-300">REACH LEVEL 100 TO MAXIMIZE (10,000 XP)</span>
+        </div>
+        <div class="relative w-full flex flex-col items-center space-y-12 pb-12 mt-4" id="path-nodes-container"></div>
+    </main>
+
+    <!-- VIEW 3: THE GAME ENGINE -->
+    <main id="game-view" class="max-w-2xl mx-auto p-4 mt-4 hidden-element z-10 relative">
+        <div class="flex items-center space-x-4 mb-6 bg-black/60 p-3 rounded border border-[#1E293B]">
+            <div class="w-full bg-[#020617] h-4 relative overflow-hidden border border-[#1E293B]">
+                <div id="game-progress-bar" class="h-full transition-all duration-300 w-0" style="background-color: var(--t-main); box-shadow: 0 0 10px var(--t-main);"></div>
+            </div>
+            <span class="font-bold w-20 text-right" style="color: var(--t-main);"><span id="game-progress-text">0</span> / 100</span>
+        </div>
+
+        <div id="game-card" class="glass-card p-6 md:p-8 rounded-xl text-center relative transition-colors duration-300">
+            <div class="flex items-center justify-center space-x-3 mb-6">
+                <span id="card-icon" class="text-4xl"></span>
+                <h2 id="card-title" class="text-xl font-bold text-white tracking-widest uppercase"></h2>
+            </div>
+            
+            <div id="prompt-container" class="bg-black/50 p-4 rounded border border-[#1E293B] mb-6 flex items-start text-left shadow-inner">
+                <span class="text-2xl mr-4 opacity-70">📟</span>
+                <div>
+                    <span class="text-xs font-bold tracking-widest block mb-1 uppercase" style="color: var(--t-main);">Terminal Prompt:</span>
+                    <p id="drill-prompt" class="text-lg text-white/90"></p>
+                </div>
+            </div>
+
+            <div id="mechanic-builder" class="hidden-element">
+                <div id="answer-zone" class="answer-zone mb-6"></div>
+                <div id="word-bank" class="flex flex-wrap justify-center gap-2 mb-8 pt-4 min-h-[100px]"></div>
+            </div>
+
+            <div id="mechanic-scenario" class="hidden-element flex flex-col space-y-4 mb-8">
+                <button id="btn-opt-0" class="btn-scenario w-full p-4 text-left text-white font-sans rounded"></button>
+                <button id="btn-opt-1" class="btn-scenario w-full p-4 text-left text-white font-sans rounded"></button>
+                <button id="btn-opt-2" class="btn-scenario w-full p-4 text-left text-white font-sans rounded"></button>
+            </div>
+
+            <div id="mechanic-chat" class="hidden-element flex flex-col mb-6 bg-black/60 border border-[#1E293B] p-4 rounded h-[350px] overflow-y-auto">
+                <div class="flex flex-col w-full" id="chat-history"></div>
+                <div id="chat-options" class="flex flex-col space-y-3 mt-auto pt-4 border-t border-[#1E293B]"></div>
+            </div>
+
+            <div id="feedback-block" class="hidden-element p-5 rounded text-left border mb-6 shadow-xl bg-black/80">
+                <h3 id="feedback-title" class="text-xl font-bold mb-2 tracking-widest uppercase"></h3>
+                <p id="feedback-msg" class="text-md text-white font-sans"></p>
+            </div>
+            
+            <div id="action-check" class="flex justify-center hidden-element">
+                <button onclick="checkBuilderAnswer()" id="btn-check" class="btn-sys w-full text-black font-bold text-xl py-4 rounded uppercase tracking-widest opacity-50 cursor-not-allowed" disabled>Execute Syntax</button>
+            </div>
+            <div id="action-continue" class="hidden-element flex justify-center">
+                <button id="btn-continue" class="btn-sys w-full text-black font-bold text-xl py-4 rounded uppercase tracking-widest">Continue >></button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- UTILITY FUNCTIONS (RESTORED) ---
+        // CRITICAL BUG FIX: These functions were missing, causing the questions to never load!
+        function rand(arr) { 
+            return arr[Math.floor(Math.random() * arr.length)]; 
+        }
+        function shuffle(arr) { 
+            return [...arr].sort(() => Math.random() - 0.5); 
+        }
+
+        const DRILLS_PER_LEVEL = 100;
+        const MAX_LEVELS = 100;
+
+        let progressData = JSON.parse(localStorage.getItem('techEnglishFinal_v6')) || { 
+            tenses: 0, sentences: 0, agile: 0, qa: 0, arch: 0, mentor: 0, client: 0, teamwork: 0, story: 0, totalXP: 0 
+        };
+
+        const generators = {
+            tenses: { title: "Grammar: Tenses", icon: "⏱️", type: "builder", desc: "Past, Present, and Future.", templates: [ { p: "Construct a PAST tense sentence indicating bug resolution.", target: "Yesterday I fixed the bug", extras: ["fixes", "will fix", "bugged"] }, { p: "Construct a FUTURE tense sentence regarding API testing.", target: "Tomorrow I will test the API", extras: ["tested", "tests", "yesterday"] }, { p: "Construct a PAST tense deployment statement.", target: "I deployed the code yesterday", extras: ["deploy", "will deploy", "deploying"] }] },
+            sentences: { title: "Grammar: 3-Word", icon: "🧱", type: "builder", desc: "Subject-Verb-Object structures.", templates: [ { p: "Form a Subject-Verb-Object sentence (Server Restart).", target: "I restarted the server", extras: ["is", "restarting", "database"] }, { p: "Form a Subject-Verb sentence (Database Failure).", target: "The database crashed", extras: ["crashing", "I", "will", "fixed"] }] },
+            agile: { title: "Comm: Agile", icon: "🎤", type: "scenario", desc: "Casual slang for Standups.", templates: [ { p: "You finished a ticket and pushed it to the production environment. What is the most natural thing to say in Standup?", opts: [ { t: "Just a heads up, I pushed that fix to prod.", correct: true, msg: "Perfect casual tech slang." }, { t: "I have deployed the application to the server.", correct: false, msg: "Too robotic/formal." }, { t: "The code is pushing.", correct: false, msg: "Incorrect grammar." }]}, { p: "You are investigating a tricky 500 error, but haven't solved it yet.", opts: [ { t: "I am looking into that 500 error right now.", correct: true, msg: "'Looking into' is perfect natural slang for investigating." }, { t: "I am fixing the error.", correct: false, msg: "You haven't fixed it yet!" }, { t: "I look the error.", correct: false, msg: "Incorrect grammar." }]} ] },
+            qa: { title: "Comm: QA Bugs", icon: "🐛", type: "scenario", desc: "Environments and rollbacks.", templates: [ { p: "QA reports a bug, but the code works perfectly on your laptop.", opts: [ { t: "That's weird, it works on my local.", correct: true, msg: "Classic developer phrase." }, { t: "My laptop has no bug.", correct: false, msg: "Unnatural phrasing." }, { t: "I cannot fix.", correct: false, msg: "Unprofessional." }]}, { p: "The latest deployment broke the staging server completely.", opts: [ { t: "The build failed. We need to roll back.", correct: true, msg: "'Roll back' is the standard term for undoing a deployment." }, { t: "Delete the code.", correct: false, msg: "Not the right technical term." }, { t: "I am rolling.", correct: false, msg: "Grammatically incorrect." }]} ] },
+            arch: { title: "System Arch", icon: "🏗️", type: "scenario", desc: "Explain databases and APIs.", templates: [ { p: "A new developer asks how the frontend talks to the backend.", opts: [ { t: "The frontend calls the REST API.", correct: true, msg: "Perfect technical explanation." }, { t: "The frontend speaks to backend.", correct: false, msg: "Unnatural phrasing." }, { t: "Frontend is RESTing.", correct: false, msg: "Grammatically incorrect." }]}, { p: "How do you explain the data caching layer?", opts: [ { t: "We cache the data in Redis for faster access.", correct: true, msg: "Great explanation of architecture." }, { t: "Data is hidden in Redis.", correct: false, msg: "Wrong terminology." }, { t: "We are caching the fast.", correct: false, msg: "Incorrect grammar." }]} ] },
+            mentor: { title: "Mentoring", icon: "👨‍💻", type: "scenario", desc: "Code reviews for juniors.", templates: [ { p: "A junior developer wrote a massive 500-line function. How do you politely tell them to split it up?", opts: [ { t: "Please extract this logic into a separate method.", correct: true, msg: "'Extract' is the perfect technical term." }, { t: "Your function is too big.", correct: false, msg: "Too blunt, not constructive." }, { t: "Cut the code.", correct: false, msg: "Unnatural." }]}, { p: "You approve of a Pull Request.", opts: [ { t: "This looks good to me, ready to merge.", correct: true, msg: "Standard, polite PR approval." }, { t: "I like it.", correct: false, msg: "A bit too informal for code review." }, { t: "Merge the code.", correct: false, msg: "Too bossy." }]} ] },
+            client: { title: "Client Scope", icon: "👔", type: "scenario", desc: "Push back on crazy deadlines.", templates: [ { p: "The client asks for a huge new feature, but the deadline is tomorrow.", opts: [ { t: "That feature is out of scope for the MVP.", correct: true, msg: "Perfect, professional pushback." }, { t: "We cannot do it.", correct: false, msg: "Too blunt/negative." }, { t: "I am not doing that.", correct: false, msg: "Unprofessional." }]}, { p: "Explaining that making the app faster will cost more money/servers.", opts: [ { t: "There is a trade-off between performance and cost.", correct: true, msg: "Excellent use of 'trade-off'." }, { t: "Fast means expensive.", correct: false, msg: "Too simple." }, { t: "We trade performance.", correct: false, msg: "Incorrect usage." }]} ] },
+            teamwork: { title: "Polite Pushback", icon: "🤝", type: "scenario", desc: "Professional disagreement.", templates: [ { p: "You disagree with a coworker's idea, but want to be polite.", opts: [ { t: "I understand, but I have a concern.", correct: true, msg: "Acknowledge first, then disagree." }, { t: "You are wrong.", correct: false, msg: "Too aggressive." }, { t: "I don't like it.", correct: false, msg: "Unprofessional." }]}, { p: "You think testing is needed before deploying.", opts: [ { t: "That makes sense, however we should test it first.", correct: true, msg: "Very professional." }, { t: "No deploying.", correct: false, msg: "Too blunt." }, { t: "We must test.", correct: false, msg: "Too demanding." }]} ] },
+            story: { title: "Incident Report", icon: "💬", type: "story", desc: "Live chat with the CEO.", stories: [ { initPrompt: "[SYSTEM ADMIN]: Outage detected on PROD-1. What is the status?", steps: [ { opts: ["The server crashed a few minutes ago.", "I crash server.", "Server is crash."], correctIdx: 0 }, { bossResp: "[SYSTEM ADMIN]: What caused the crash?", opts: ["Because memory leak.", "Because there was a severe memory leak.", "So memory leaked."], correctIdx: 1 }, { bossResp: "[SYSTEM ADMIN]: Acknowledged. Action taken?", opts: ["So I am restarting the instances now.", "Because I restart.", "I restarted."], correctIdx: 0 }, { bossResp: "[SYSTEM ADMIN]: Current system status?", opts: ["Now the system is stable.", "So system good.", "Now it working."], correctIdx: 0 } ] } ] }
+        };
+
+        let currentCategory = null; // Global scope
+        let currentExercise = null;
+        let availableWords = []; let selectedWords = []; let targetSentence = "";
+        let currentStoryObj = null; let currentStoryIndex = 0;
+
+        function renderDashboard() {
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            for (let key in generators) {
+                const cat = generators[key];
+                let currentLvl = Math.floor((progressData[key] || 0) / DRILLS_PER_LEVEL) + 1;
+                let prog = (progressData[key] || 0) % DRILLS_PER_LEVEL;
+
+                let card = document.createElement('div');
+                card.className = 'dash-card group';
+                card.onclick = () => showPath(key);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <span class="text-3xl mr-3 group-hover:scale-125 transition-transform">${cat.icon}</span>
+                            <div>
+                                <h3 class="text-lg font-bold uppercase tracking-widest text-white group-hover:text-white transition-colors" style="color: var(--t-main);">${cat.title}</h3>
+                                <p class="text-xs text-slate-400">${cat.desc}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-[#1E293B] flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Level ${currentLvl} <span class="text-slate-500 font-normal">/ 100</span></span>
+                        <span class="text-xs font-bold" style="color: var(--t-main);">${prog} / ${DRILLS_PER_LEVEL} XP</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+            document.getElementById('total-xp-display').innerText = progressData.totalXP;
+        }
+
+        function showDashboard() {
+            document.getElementById('game-view').classList.add('hidden-element');
+            document.getElementById('path-view').classList.add('hidden-element');
+            document.getElementById('dashboard-view').classList.remove('hidden-element');
+            document.getElementById('back-btn').classList.add('hidden-element');
+            document.getElementById('nav-title').innerHTML = '<span class="mr-2 animate-pulse text-white">🔴</span> SOC TERMINAL';
+            
+            const robot = document.getElementById('robot-mascot');
+            robot.innerText = '🤖';
+            robot.className = "fixed right-6 bottom-10 text-[5rem] z-50 animate-bob transition-all duration-300 pointer-events-none";
+            
+            renderDashboard();
+        }
+
+        function showPath(categoryKey) {
+            currentCategory = categoryKey;
+            document.getElementById('dashboard-view').classList.add('hidden-element');
+            document.getElementById('path-view').classList.remove('hidden-element');
+            document.getElementById('game-view').classList.add('hidden-element');
+            document.getElementById('back-btn').classList.remove('hidden-element');
+            document.getElementById('back-btn').onclick = showDashboard;
+            
+            const cat = generators[categoryKey];
+            document.getElementById('nav-title').innerText = "MODULE: " + cat.title;
+            document.getElementById('path-module-title').innerText = cat.title;
+
+            renderPathLine(categoryKey);
+        }
+
+        function renderPathLine(categoryKey) {
+            const container = document.getElementById('path-nodes-container');
+            container.innerHTML = '<div class="path-line"></div>'; 
+            
+            let currentLvl = Math.floor((progressData[categoryKey] || 0) / DRILLS_PER_LEVEL) + 1;
+            
+            for(let i=1; i<=MAX_LEVELS; i++) {
+                let div = document.createElement('div');
+                div.className = "relative flex flex-col items-center";
+                
+                let offset = (i % 4 === 1) ? -40 : (i % 4 === 3) ? 40 : 0;
+                div.style.transform = `translateX(${offset}px)`;
+
+                let statusClass = "";
+                let iconText = i;
+                
+                if (i < currentLvl) {
+                    statusClass = "completed";
+                    iconText = "✔️";
+                } else if (i === currentLvl) {
+                    statusClass = "active";
+                    iconText = "▶";
+                } else {
+                    statusClass = "locked";
+                    iconText = "🔒";
+                }
+
+                div.innerHTML = `
+                    <div class="text-xs font-bold uppercase tracking-widest mb-1 ${i === currentLvl ? 'text-white' : 'text-slate-500'}" ${i===currentLvl ? 'style="color: var(--t-main);"' : ''}>Level ${i}</div>
+                    <div class="level-node ${statusClass}" ${i === currentLvl ? `onclick="startGame()"` : ''}>
+                        ${iconText}
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+
+            setTimeout(() => {
+                let activeNode = document.querySelector('.level-node.active');
+                if(activeNode) activeNode.scrollIntoView({behavior: "smooth", block: "center"});
+            }, 100);
+        }
+
+        function startGame() {
+            document.getElementById('path-view').classList.add('hidden-element');
+            document.getElementById('game-view').classList.remove('hidden-element');
+            document.getElementById('back-btn').onclick = () => showPath(currentCategory);
+            
+            const cat = generators[currentCategory];
+            document.getElementById('card-icon').innerText = cat.icon;
+            document.getElementById('card-title').innerText = cat.title;
+
+            document.getElementById('mechanic-builder').classList.add('hidden-element');
+            document.getElementById('mechanic-scenario').classList.add('hidden-element');
+            document.getElementById('mechanic-chat').classList.add('hidden-element');
+            document.getElementById('prompt-container').classList.remove('hidden-element');
+            document.getElementById('action-check').classList.add('hidden-element');
+
+            if(cat.type === 'builder') {
+                document.getElementById('mechanic-builder').classList.remove('hidden-element');
+                document.getElementById('action-check').classList.remove('hidden-element');
+                loadBuilder(rand(cat.templates));
+            } else if (cat.type === 'scenario') {
+                document.getElementById('mechanic-scenario').classList.remove('hidden-element');
+                loadScenario(rand(cat.templates));
+            } else if (cat.type === 'story') {
+                document.getElementById('prompt-container').classList.add('hidden-element');
+                document.getElementById('mechanic-chat').classList.remove('hidden-element');
+                currentStoryObj = rand(cat.stories);
+                currentStoryIndex = 0;
+                document.getElementById('chat-history').innerHTML = `<div class="chat-bubble-boss font-bold" style="color: var(--t-main);">${currentStoryObj.initPrompt}</div>`;
+                loadStoryStep();
+            }
+            updateGameUI();
+        }
+
+        function updateGameUI() {
+            let prog = progressData[currentCategory] % DRILLS_PER_LEVEL;
+            let percent = (prog / DRILLS_PER_LEVEL) * 100;
+            document.getElementById('game-progress-text').innerText = prog;
+            document.getElementById('game-progress-bar').style.width = percent + '%';
+        }
+
+        function resetGameUI() {
+            document.getElementById('feedback-block').classList.add('hidden-element');
+            if(generators[currentCategory].type === 'builder') document.getElementById('action-check').classList.remove('hidden-element');
+            document.getElementById('action-continue').classList.add('hidden-element');
+            document.getElementById('game-card').className = "glass-card p-6 md:p-8 rounded-xl text-center relative transition-colors duration-300";
+            
+            const robot = document.getElementById('robot-mascot');
+            robot.innerText = '🤖';
+            robot.className = "fixed right-6 bottom-10 text-[5rem] z-50 animate-bob transition-all duration-300 pointer-events-none";
+            document.getElementById('thunder-overlay').classList.remove('animate-thunder');
+        }
+
+        function loadBuilder(exerciseData) {
+            currentExercise = exerciseData; targetSentence = exerciseData.target;
+            document.getElementById('drill-prompt').innerText = exerciseData.p;
+            
+            let words = targetSentence.split(" ").concat(exerciseData.extras);
+            availableWords = shuffle(words).map((word, idx) => ({ id: idx, word: word, used: false }));
+            selectedWords = [];
+            resetGameUI(); renderWords();
+        }
+
+        function renderWords() {
+            const bank = document.getElementById('word-bank'); const zone = document.getElementById('answer-zone');
+            bank.innerHTML = ''; zone.innerHTML = '';
+
+            selectedWords.forEach(sw => {
+                let btn = document.createElement('div'); btn.className = 'word-block'; btn.innerText = sw.word;
+                btn.onclick = () => { let aw = selectedWords.splice(selectedWords.findIndex(w => w.id === sw.id), 1)[0]; availableWords.find(w => w.id === aw.id).used = false; renderWords(); };
+                zone.appendChild(btn);
+            });
+
+            availableWords.forEach(aw => {
+                let btn = document.createElement('div'); btn.className = `word-block ${aw.used ? 'used' : ''}`; btn.innerText = aw.word;
+                if (!aw.used) btn.onclick = () => { let awd = availableWords.find(w => w.id === aw.id); awd.used = true; selectedWords.push(awd); renderWords(); };
+                bank.appendChild(btn);
+            });
+
+            let btnCheck = document.getElementById('btn-check');
+            if (selectedWords.length > 0) { btnCheck.classList.remove('opacity-50', 'cursor-not-allowed'); btnCheck.disabled = false; } 
+            else { btnCheck.classList.add('opacity-50', 'cursor-not-allowed'); btnCheck.disabled = true; }
+        }
+
+        function checkBuilderAnswer() {
+            let isCorrect = selectedWords.map(w => w.word).join(" ").toLowerCase() === targetSentence.toLowerCase();
+            showFeedback(isCorrect, isCorrect ? "Syntax Verified." : "Syntax Error.", isCorrect ? "Sentence built correctly." : `Expected Output: "${targetSentence}"`, () => loadBuilder(currentExercise));
+        }
+
+        function loadScenario(exerciseData) {
+            currentExercise = exerciseData;
+            document.getElementById('drill-prompt').innerText = exerciseData.p;
+            
+            let opts = shuffle([...exerciseData.opts]);
+            for(let i=0; i<3; i++) {
+                let btn = document.getElementById(`btn-opt-${i}`);
+                btn.innerText = opts[i].t;
+                btn.className = "btn-scenario w-full p-4 text-left text-white font-sans rounded";
+                btn.onclick = () => checkScenarioAnswer(opts[i]);
+            }
+            resetGameUI();
+        }
+
+        function checkScenarioAnswer(selectedOpt) {
+            showFeedback(selectedOpt.correct, selectedOpt.correct ? "Response Accepted." : "Response Denied.", selectedOpt.msg, () => loadScenario(currentExercise));
+        }
+
+        function loadStoryStep() {
+            let step = currentStoryObj.steps[currentStoryIndex];
+            let optsDiv = document.getElementById('chat-options');
+            optsDiv.innerHTML = '';
+            
+            let shuffledOpts = shuffle(step.opts.map((txt, idx) => ({txt, isCorrect: idx === step.correctIdx})));
+            
+            shuffledOpts.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = "btn-scenario w-full p-3 text-left text-white font-sans rounded text-sm";
+                btn.innerText = opt.txt;
+                btn.onclick = () => {
+                    if(opt.isCorrect) {
+                        document.getElementById('chat-history').innerHTML += `<div class="chat-bubble-user animate-pop">${opt.txt}</div>`;
+                        currentStoryIndex++;
+                        if(currentStoryIndex < currentStoryObj.steps.length) {
+                            setTimeout(() => {
+                                document.getElementById('chat-history').innerHTML += `<div class="chat-bubble-boss font-bold animate-pop" style="color: var(--t-main);">${currentStoryObj.steps[currentStoryIndex].bossResp}</div>`;
+                                document.getElementById('mechanic-chat').scrollTop = document.getElementById('mechanic-chat').scrollHeight;
+                                loadStoryStep();
+                            }, 600);
+                        } else {
+                            setTimeout(() => showFeedback(true, "Incident Resolved.", "You successfully handled the incident report.", null), 600);
+                        }
+                    } else {
+                        btn.className = "w-full p-3 text-left text-white font-sans rounded text-sm bg-red-900 border-red-500";
+                        setTimeout(() => showFeedback(false, "Communication Failure.", "That was not the appropriate professional response.", () => {
+                            document.getElementById('chat-history').innerHTML = `<div class="chat-bubble-boss font-bold" style="color: var(--t-main);">${currentStoryObj.initPrompt}</div>`;
+                            currentStoryIndex = 0;
+                            loadStoryStep();
+                        }), 600);
+                    }
+                };
+                optsDiv.appendChild(btn);
+            });
+            document.getElementById('mechanic-chat').scrollTop = document.getElementById('mechanic-chat').scrollHeight;
+            resetGameUI();
+        }
+
+        function showFeedback(isCorrect, titleTxt, msgTxt, retryFunc) {
+            const feedback = document.getElementById('feedback-block');
+            document.getElementById('action-check').classList.add('hidden-element');
+            
+            if(generators[currentCategory].type === 'scenario') document.getElementById('mechanic-scenario').classList.add('hidden-element');
+            if(generators[currentCategory].type === 'story') document.getElementById('chat-options').innerHTML = '';
+
+            document.getElementById('action-continue').classList.remove('hidden-element');
+            feedback.classList.remove('hidden-element');
+
+            let btnContinue = document.getElementById('btn-continue');
+            const robot = document.getElementById('robot-mascot');
+
+            if (isCorrect) {
+                document.getElementById('game-card').classList.add('animate-pop');
+                document.getElementById('game-card').style.borderColor = "var(--t-main)";
+                feedback.style.backgroundColor = "var(--t-main-dark)";
+                feedback.style.borderColor = "var(--t-main)";
+                feedback.style.boxShadow = "0 0 20px var(--t-main-glow)";
+                
+                document.getElementById('feedback-title').innerHTML = `<span style="color: var(--t-main);">${titleTxt}</span>`;
+                document.getElementById('feedback-msg').innerText = msgTxt;
+                btnContinue.style.backgroundColor = "var(--t-main)";
+                btnContinue.onclick = () => awardXPAndNext();
+                
+                robot.innerText = '🦾🤖⚡';
+                robot.className = "fixed right-6 bottom-10 text-[6rem] z-50 animate-robotHappy transition-all duration-300 pointer-events-none";
+                robot.style.filter = "drop-shadow(0 0 15px var(--t-main))";
+                
+                let thunder = document.getElementById('thunder-overlay');
+                thunder.classList.remove('animate-thunder'); void thunder.offsetWidth; thunder.classList.add('animate-thunder');
+            } else {
+                document.getElementById('game-card').classList.add('animate-shake');
+                document.getElementById('game-card').style.borderColor = "#EF4444";
+                feedback.style.backgroundColor = "#7F1D1D";
+                feedback.style.borderColor = "#EF4444";
+                feedback.style.boxShadow = "0 0 20px rgba(239,68,68,0.5)";
+                
+                document.getElementById('feedback-title').innerHTML = `<span class='text-red-500'>${titleTxt}</span>`;
+                document.getElementById('feedback-msg').innerText = msgTxt;
+                btnContinue.style.backgroundColor = "#EF4444";
+                
+                robot.innerText = '💥🤖';
+                robot.className = "fixed right-6 bottom-10 text-[5rem] z-50 animate-robotFall pointer-events-none";
+                robot.style.filter = "none";
+
+                btnContinue.onclick = () => {
+                    document.getElementById('game-card').classList.remove('animate-shake');
+                    if(generators[currentCategory].type === 'scenario') document.getElementById('mechanic-scenario').classList.remove('hidden-element');
+                    retryFunc();
+                };
+            }
+        }
+
+        function awardXPAndNext() {
+            progressData[currentCategory] = (progressData[currentCategory] || 0) + 1;
+            progressData.totalXP += (generators[currentCategory].type === 'story') ? 50 : 10;
+            localStorage.setItem('techEnglishFinal_v6', JSON.stringify(progressData));
+            
+            if(progressData[currentCategory] % DRILLS_PER_LEVEL === 0 && progressData[currentCategory] > 0) {
+                alert(`🎉 SYSTEM UPGRADE: You reached Level ${Math.floor(progressData[currentCategory] / DRILLS_PER_LEVEL) + 1} in ${generators[currentCategory].title}! 🎉`);
+                showPath(currentCategory); 
+                return;
+            }
+            updateGameUI();
+            
+            let cat = generators[currentCategory];
+            if(cat.type === 'story') {
+                document.getElementById('chat-history').innerHTML = '';
+                currentStoryObj = rand(cat.stories); currentStoryIndex = 0;
+                document.getElementById('chat-history').innerHTML = `<div class="chat-bubble-boss font-bold" style="color: var(--t-main);">${currentStoryObj.initPrompt}</div>`;
+                loadStoryStep();
+            } else if (cat.type === 'scenario') {
+                document.getElementById('mechanic-scenario').classList.remove('hidden-element');
+                loadScenario(rand(cat.templates));
+            } else {
+                loadBuilder(rand(cat.templates));
+            }
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>
