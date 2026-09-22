@@ -125,9 +125,18 @@
 
     <!-- VIEW 1: DASHBOARD -->
     <main id="dashboard-view" class="max-w-4xl mx-auto p-4 mt-8 relative z-10">
-        <div class="text-center mb-8">
+        <div class="text-center mb-4">
             <h1 class="text-3xl font-black text-white tracking-widest mb-2" style="text-shadow: 0 0 15px var(--t-main);">SELECT MODULE</h1>
             <p class="text-slate-400">Initialize a training sequence.</p>
+        </div>
+        <div class="flex flex-wrap justify-center items-center gap-4 mb-6 text-sm">
+            <div class="bg-black/60 px-4 py-2 rounded border border-[#1E293B] flex items-center gap-2">
+                <span>🔥</span> <span id="streak-display" class="font-bold" style="color: var(--t-main);">0</span> <span class="text-slate-400">Day Streak</span>
+            </div>
+            <div class="bg-black/60 px-4 py-2 rounded border border-[#1E293B] flex items-center gap-2">
+                <span>📊</span> <span id="total-practices-display" class="font-bold" style="color: var(--t-main);">0</span> <span class="text-slate-400">Practices</span>
+            </div>
+            <button onclick="resetProgress()" class="bg-red-900/50 hover:bg-red-900 px-4 py-2 rounded border border-red-800 text-red-300 text-xs uppercase tracking-widest transition-colors">🗑️ Reset</button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="options-container"></div>
     </main>
@@ -147,7 +156,7 @@
             <div class="w-full bg-[#020617] h-4 relative overflow-hidden border border-[#1E293B]">
                 <div id="game-progress-bar" class="h-full transition-all duration-300 w-0" style="background-color: var(--t-main); box-shadow: 0 0 10px var(--t-main);"></div>
             </div>
-            <span class="font-bold w-20 text-right" style="color: var(--t-main);"><span id="game-progress-text">0</span> / 100</span>
+            <span class="font-bold w-20 text-right" style="color: var(--t-main);"><span id="game-progress-text">0</span> / <span id="game-progress-max">5</span></span>
         </div>
 
         <div id="game-card" class="glass-card p-6 md:p-8 rounded-xl text-center relative transition-colors duration-300">
@@ -211,10 +220,14 @@
 
         const DRILLS_PER_LEVEL = 5;
         const MAX_LEVELS = 100;
+        const STORAGE_KEY = 'techEnglishFinal_v7';
 
-        let progressData = JSON.parse(localStorage.getItem('techEnglishFinal_v6')) || { 
-            tenses: 0, sentences: 0, agile: 0, qa: 0, arch: 0, mentor: 0, client: 0, teamwork: 0, story: 0, totalXP: 0 
-        };
+        let progressData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { totalXP: 0 };
+        // Migrate: copy old v6 data if v7 doesn't exist yet
+        if (!localStorage.getItem(STORAGE_KEY) && localStorage.getItem('techEnglishFinal_v6')) {
+            progressData = JSON.parse(localStorage.getItem('techEnglishFinal_v6'));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
+        }
 
         const generators = {
     "tenses": {
@@ -3768,6 +3781,174 @@
                 ]
             }
         ]
+    },
+    "interview": {
+        "title": "Job Interview Prep",
+        "icon": "💼",
+        "type": "scenario",
+        "desc": "Tech & Behavioral Interview Q&A.",
+        "templates": [
+            {
+                "p": "The interviewer asks: 'Tell me about yourself and your background.'",
+                "opts": [
+                    { "t": "I am a Senior Java Developer with over 7 years of experience specializing in Spring Boot microservices, distributed caching, and scalable REST APIs.", "correct": true, "msg": "Perfect! Concise, confident, and highlights your core technical stack and seniority." },
+                    { "t": "I am looking for a job and I write code every day in my current company.", "correct": false, "msg": "Too basic and lacks impact or technical identity." },
+                    { "t": "I studied computer science and I know many technologies like HTML and Java.", "correct": false, "msg": "Sounds like an entry-level graduate rather than an experienced developer." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'Why are you looking for a change from your current role?'",
+                "opts": [
+                    { "t": "I'm looking for new challenges where I can lead architectural initiatives and work with higher-scale distributed systems.", "correct": true, "msg": "Excellent positive framing focused on professional growth." },
+                    { "t": "My current manager is bad and the company gives too much work.", "correct": false, "msg": "Never badmouth a previous employer in an interview." },
+                    { "t": "I just want a higher salary because expenses are high.", "correct": false, "msg": "Too blunt; focus on career growth and technical challenge first." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you troubleshoot an OutOfMemoryError in production?'",
+                "opts": [
+                    { "t": "I capture a heap dump using jmap, analyze object retention using Eclipse Memory Analyzer (MAT), and inspect garbage collection logs.", "correct": true, "msg": "Accurate, structured senior engineering approach." },
+                    { "t": "I just restart the server whenever the memory gets full.", "correct": false, "msg": "Restarting treats the symptom, not the root cause." },
+                    { "t": "I increase the JVM heap size to maximum and hope it doesn't crash.", "correct": false, "msg": "Unprofessional and ignores the underlying memory leak." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you handle disagreement with a technical decision made by your team lead?'",
+                "opts": [
+                    { "t": "I present my perspective with data, benchmarks, or a quick POC, but once the team reaches a decision, I fully commit to executing it.", "correct": true, "msg": "Demonstrates 'disagree and commit'—a hallmark of senior engineers." },
+                    { "t": "I argue until they understand that my way is better.", "correct": false, "msg": "Shows poor teamwork and excessive ego." },
+                    { "t": "I stay quiet and don't say anything to avoid conflict.", "correct": false, "msg": "Passive behavior is not expected from senior engineers." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'Explain how Spring Boot handles Dependency Injection.'",
+                "opts": [
+                    { "t": "Spring Boot uses an Inversion of Control (IoC) container to manage bean lifecycles and inject dependencies via constructor injection.", "correct": true, "msg": "Clear, precise architectural explanation preferring constructor injection." },
+                    { "t": "Spring Boot creates all classes automatically with magic annotations.", "correct": false, "msg": "Too superficial; shows a lack of deep framework understanding." },
+                    { "t": "It uses @Autowired everywhere so we don't have to write code.", "correct": false, "msg": "Field injection is actually discouraged in modern Spring." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'Describe a time a production deployment failed on your watch.'",
+                "opts": [
+                    { "t": "We hit an unindexed query timeout during peak traffic; I initiated an immediate rollback, added the composite index, and updated our migration checklist.", "correct": true, "msg": "Follows the STAR method: Situation, Task, Action, Result + Learning." },
+                    { "t": "The QA team didn't test properly, so it was their fault the build failed.", "correct": false, "msg": "Blaming teammates is an immediate red flag." },
+                    { "t": "I have never made any mistakes in production deployments.", "correct": false, "msg": "Dishonest and unconvincing; all senior engineers have faced incidents." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'When would you choose Kafka over RabbitMQ?'",
+                "opts": [
+                    { "t": "I choose Kafka for high-throughput distributed event streaming with log retention and replayability, whereas RabbitMQ is better for complex routing and task queues.", "correct": true, "msg": "Outstanding architectural comparison showing deep domain knowledge." },
+                    { "t": "Kafka is newer and better than RabbitMQ for everything.", "correct": false, "msg": "Oversimplified and technically inaccurate." },
+                    { "t": "We always use Kafka because that's what everyone uses now.", "correct": false, "msg": "Lacks architectural justification." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you design APIs to be backward compatible?'",
+                "opts": [
+                    { "t": "I implement semantic versioning in URI or headers, avoid removing fields, and introduce non-breaking optional fields with sensible defaults.", "correct": true, "msg": "Industry-standard API evolution practice." },
+                    { "t": "I change the JSON payload and tell the frontend team to update their code immediately.", "correct": false, "msg": "Breaks client consumers and causes outages." },
+                    { "t": "We don't worry about old versions once a new feature is shipped.", "correct": false, "msg": "Dangerous attitude toward production APIs." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'What is your approach to unit and integration testing?'",
+                "opts": [
+                    { "t": "I write focused unit tests with Mockito for business logic, and use Testcontainers for integration tests against real database and messaging instances.", "correct": true, "msg": "Modern, robust testing strategy combining unit tests with real infrastructure integration." },
+                    { "t": "I test everything manually via Postman so I don't need to write test code.", "correct": false, "msg": "Unacceptable for senior engineering positions." },
+                    { "t": "Only QA should write tests; developers should focus strictly on building features.", "correct": false, "msg": "Ignores basic engineering ownership and CI/CD best practices." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you explain technical debt to non-technical product managers?'",
+                "opts": [
+                    { "t": "I explain it like financial debt: taking shortcuts lets us ship faster today, but the interest we pay slows down all future feature deliveries.", "correct": true, "msg": "Brilliant business analogy that product managers immediately understand." },
+                    { "t": "I tell them the code is ugly and they must let me rewrite it.", "correct": false, "msg": "Fails to communicate business value or risk." },
+                    { "t": "I don't explain it; I just refactor in secret without telling them.", "correct": false, "msg": "Breaks stakeholder trust and introduces unapproved scope." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you ensure thread safety in a shared Java service?'",
+                "opts": [
+                    { "t": "I design services to be stateless, favor immutable objects, and utilize concurrent collections or Atomic variables when shared state is unavoidable.", "correct": true, "msg": "Clean, modern concurrency philosophy avoiding unnecessary locks." },
+                    { "t": "I make every method synchronized so nothing runs at the same time.", "correct": false, "msg": "Crushes application throughput with severe thread contention." },
+                    { "t": "Thread safety is handled automatically by Spring Boot singletons.", "correct": false, "msg": "Dangerous misconception; Spring singletons are NOT thread-safe by default." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you handle a junior developer who consistently submits buggy code?'",
+                "opts": [
+                    { "t": "I set up 1-on-1 pair programming sessions, help them write test cases before coding, and establish clear PR review checklists.", "correct": true, "msg": "Demonstrates empathetic leadership and proactive coaching." },
+                    { "t": "I reject all their PRs and tell the manager they are not performing.", "correct": false, "msg": "Too harsh; misses opportunity to mentor and develop team talent." },
+                    { "t": "I just rewrite their code myself every evening to save time.", "correct": false, "msg": "Leads to developer burnout and doesn't solve the skill gap." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'What is your strategy for database connection pool sizing (e.g., HikariCP)?'",
+                "opts": [
+                    { "t": "I follow the PostgreSQL formula: pool size = (CPU cores * 2) + disk spindles, and tune based on load testing rather than over-allocating connections.", "correct": true, "msg": "Shows deep understanding of database performance and resource contention." },
+                    { "t": "I set the connection pool to 500 so connections never run out.", "correct": false, "msg": "Over-allocating connections causes disk thrashing and crashes databases." },
+                    { "t": "I use the default settings and never touch the configuration.", "correct": false, "msg": "Shows a lack of operational tuning experience." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'Describe your experience with Java 17 and Java 21 features.'",
+                "opts": [
+                    { "t": "I actively leverage Records for DTOs, Pattern Matching for cleaner switch statements, and Virtual Threads (Project Loom) for high-concurrency I/O operations.", "correct": true, "msg": "Shows modern, up-to-date expertise with current LTS Java versions." },
+                    { "t": "Java hasn't really changed much since Java 8.", "correct": false, "msg": "Shows outdated knowledge and reluctance to adopt modern standards." },
+                    { "t": "I only use Java 8 because newer versions are too complicated.", "correct": false, "msg": "Major red flag for modern enterprise engineering." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'What are your salary expectations?'",
+                "opts": [
+                    { "t": "Based on my senior experience and market research for this role, I am targeting a competitive market range, but I am open to discussing the complete package.", "correct": true, "msg": "Professional, data-driven, and maintains negotiation flexibility." },
+                    { "t": "Give me as much money as possible.", "correct": false, "msg": "Unprofessional and crude." },
+                    { "t": "Whatever you pay is fine with me, money is not important.", "correct": false, "msg": "Undervalues your expertise and signals low confidence." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'Do you have any questions for us?'",
+                "opts": [
+                    { "t": "What are the biggest architectural bottlenecks your team is currently solving, and what does success look like for this role in the first 90 days?", "correct": true, "msg": "Outstanding question demonstrating leadership, curiosity, and immediate business focus." },
+                    { "t": "No, I don't have any questions, you explained everything.", "correct": false, "msg": "Signals a lack of genuine interest or engagement." },
+                    { "t": "How many vacation days do I get and when can I take leave?", "correct": false, "msg": "Poor timing; save administrative questions for HR/recruiter follow-ups." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you secure microservices from unauthorized access?'",
+                "opts": [
+                    { "t": "I use OAuth2 with JWT tokens, enforce role-based access control (RBAC), validate input against OWASP guidelines, and communicate over mTLS internally.", "correct": true, "msg": "Comprehensive zero-trust security architecture overview." },
+                    { "t": "We keep the servers behind a firewall so authentication is not needed.", "correct": false, "msg": "Perimeter-only security is obsolete and highly vulnerable." },
+                    { "t": "I hardcode an API secret key in application.properties.", "correct": false, "msg": "Severe security violation." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'How do you handle scope creep when a project deadline is fixed?'",
+                "opts": [
+                    { "t": "I document the new requests, assess their impact on delivery, and collaborate with the Product Owner to trade off lower-priority features to protect the launch date.", "correct": true, "msg": "Proactive scope negotiation and stakeholder management." },
+                    { "t": "I work 16 hours a day and on weekends to finish everything.", "correct": false, "msg": "Unsustainable heroics that lead to low code quality and burnout." },
+                    { "t": "I simply ignore the new requirements without telling the product team.", "correct": false, "msg": "Unprofessional and causes delivery mismatches." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'Why should we hire you over other candidates?'",
+                "opts": [
+                    { "t": "I bring not just strong core Java technical skills, but a proven track record of mentoring teams, resolving high-stress production issues, and shipping reliable business value.", "correct": true, "msg": "Well-balanced pitch highlighting both technical competence and organizational leadership." },
+                    { "t": "Because I am the smartest developer and I code faster than anyone.", "correct": false, "msg": "Arrogant and lacks humility." },
+                    { "t": "I really need a job right now.", "correct": false, "msg": "Desperation is not a compelling hiring reason." }
+                ]
+            },
+            {
+                "p": "The interviewer asks: 'What is your philosophy on writing code documentation?'",
+                "opts": [
+                    { "t": "I believe self-documenting code with clear naming is foundation #1, complemented by concise ADRs (Architecture Decision Records) and up-to-date OpenAPI specs.", "correct": true, "msg": "Pragmatic, modern documentation philosophy that engineers actually maintain." },
+                    { "t": "Good code never needs any documentation at all.", "correct": false, "msg": "Arrogant myth that harms team onboarding and maintainability." },
+                    { "t": "I write 50-page Word documents for every function I code.", "correct": false, "msg": "Outdated waterfall practice that quickly becomes obsolete." }
+                ]
+            }
+        ]
     }
 };
 
@@ -3787,37 +3968,174 @@
             }
             return pool[deckIndices[catKey].pop()];
         }
+
+        // --- DAILY STREAK TRACKING ---
+        function updateStreak() {
+            const today = new Date().toDateString();
+            const lastDate = progressData._lastPracticeDate || '';
+            if (lastDate !== today) {
+                const yesterday = new Date(Date.now() - 86400000).toDateString();
+                if (lastDate === yesterday) {
+                    progressData._streak = (progressData._streak || 0) + 1;
+                } else if (lastDate !== '') {
+                    progressData._streak = 1; // streak broken
+                } else {
+                    progressData._streak = 1; // first day
+                }
+                progressData._lastPracticeDate = today;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
+            }
+        }
+
+        function getTotalPractices() {
+            let total = 0;
+            for (let key in generators) {
+                total += (progressData[key] || 0);
+            }
+            return total;
+        }
+
+        
+        const techDictionary = {
+            'prod': 'Production: The live environment where real users interact with the app.',
+            'auth': 'Authentication: The process of verifying user identity.',
+            'PR': 'Pull Request: A request to review and merge code changes.',
+            'merge': 'Combining different branches of code together.',
+            'EOD': 'End Of Day: The end of the standard workday.',
+            'agile': 'A methodology focused on iterative development.',
+            'sprint': 'A short, time-boxed period to complete a set amount of work.',
+            'deploy': 'To push new code to a server so it can be run.',
+            'bug': 'An error, flaw, or fault in the code.',
+            'fix': 'A solution that resolves a bug or issue.',
+            'repo': 'Repository: A storage location for source code.',
+            'branch': 'A parallel version of a repository where isolated changes are made.',
+            'commit': 'A saved change to the codebase.',
+            'QA': 'Quality Assurance: Testing software to ensure it meets requirements.',
+            'standup': 'A short daily meeting to discuss progress and blockers.',
+            'blocker': 'An issue that prevents a developer from making progress.',
+            'refactor': 'Restructuring existing code without changing its external behavior.',
+            'API': 'Application Programming Interface: How programs communicate.',
+            'UI': 'User Interface: The graphical layout of an application.',
+            'backend': 'The server-side of an application.',
+            'frontend': 'The client-side of an application.',
+            'database': 'An organized collection of data.',
+            'cache': 'A temporary storage location for frequently accessed data.',
+            'server': 'A computer that provides resources to other computers.',
+            'architecture': 'The fundamental structures of a software system.',
+            'microservices': 'Structuring an app as a collection of small services.',
+            'monolith': 'All components of a system combined into a single program.',
+            'cloud': 'Servers accessed over the internet.',
+            'AWS': 'Amazon Web Services: A cloud platform.',
+            'GCP': 'Google Cloud Platform.',
+            'Docker': 'A platform to develop and run applications in containers.',
+            'Kubernetes': 'System for automating application deployment.',
+            'CI/CD': 'Continuous Integration/Deployment: Automating code delivery.',
+            'pipeline': 'Automated processes to compile, build, and deploy code.',
+            'framework': 'A platform for developing software applications.',
+            'library': 'A collection of pre-compiled routines a program can use.',
+            'module': 'A separate unit of software.',
+            'dependency': 'When one piece of software relies on another.',
+            'Git': 'A distributed version-control system.',
+            'GitHub': 'A hosting service for software development using Git.',
+            'Jira': 'A tool for issue tracking and agile project management.',
+            'Confluence': 'A team workspace for documentation.',
+            'Slack': 'A business communication platform.',
+            'Teams': 'Microsoft business communication platform.',
+            'Java': 'An object-oriented programming language.',
+            'Spring': 'An application framework for Java.',
+            'Spring Boot': 'Framework used to create a microservice.',
+            'Kafka': 'A distributed event streaming platform.',
+            'RabbitMQ': 'A message-broker software.',
+            'SQL': 'Structured Query Language: For managing data in a relational database.',
+            'REST': 'Representational state transfer: An API architecture style.',
+            'JSON': 'JavaScript Object Notation: A data interchange format.',
+            'OOM': 'Out of Memory: An error when a system runs out of RAM.',
+            'heap': 'Memory used for dynamic allocation in Java.',
+            'thread': 'The smallest sequence of programmed instructions managed by a scheduler.',
+            'scope creep': 'When a project\'s requirements increase over its lifecycle.'
+        };
+
+        // --- RESET PROGRESS ---
+        function resetProgress() {
+            if (confirm('⚠️ Are you sure you want to reset ALL progress? This cannot be undone!')) {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('techEnglishFinal_v6');
+                progressData = { totalXP: 0 };
+                deckIndices = {};
+                renderDashboard();
+            }
+        }
+
+        // --- SOUND FEEDBACK (Web Audio API - no external files needed) ---
+        function playSound(isCorrect) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                gain.gain.value = 0.15;
+                
+                if (isCorrect) {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523, ctx.currentTime);      // C5
+                    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2); // G5
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc.start(); osc.stop(ctx.currentTime + 0.4);
+                } else {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, ctx.currentTime);
+                    osc.frequency.setValueAtTime(150, ctx.currentTime + 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                }
+            } catch(e) { /* Audio not supported, silently fail */ }
+        }
         
         function renderDashboard() {
             const container = document.getElementById('options-container');
             container.innerHTML = '';
+            document.getElementById('dashboard-view').classList.remove('hidden-element');
+            document.getElementById('path-view').classList.add('hidden-element');
+            document.getElementById('game-view').classList.add('hidden-element');
+            document.getElementById('back-btn').classList.add('hidden-element');
             
-            for (let key in generators) {
-                const cat = generators[key];
-                let currentLvl = Math.floor((progressData[key] || 0) / DRILLS_PER_LEVEL) + 1;
-                let prog = (progressData[key] || 0) % DRILLS_PER_LEVEL;
+            // Generate a random seed for this session to shuffle colors
+            const sessionColors = ['#38BDF8', '#818CF8', '#A78BFA', '#34D399', '#F472B6', '#FBBF24'];
+            const randomColor = sessionColors[Math.floor(Math.random() * sessionColors.length)];
+            
+            // Randomize order of cards for dynamic feel
+            const categories = Object.keys(generators);
+            const shuffledCategories = shuffle([...categories]);
 
+            shuffledCategories.forEach((key, index) => {
+                const cat = generators[key];
                 let card = document.createElement('div');
-                card.className = 'dash-card group';
+                let completed = progressData[key] || 0;
+                let lvl = Math.floor(completed / DRILLS_PER_LEVEL) + 1;
+                
+                // Varied border colors based on index to make it look dynamic
+                const borderColor = sessionColors[index % sessionColors.length];
+                
+                card.className = "dash-card p-6 flex flex-col items-center justify-center space-y-4 hover:scale-105 transition-transform cursor-pointer border-t-2";
+                card.style.borderTopColor = borderColor;
                 card.onclick = () => showPath(key);
                 card.innerHTML = `
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center">
-                            <span class="text-3xl mr-3 group-hover:scale-125 transition-transform">${cat.icon}</span>
-                            <div>
-                                <h3 class="text-lg font-bold uppercase tracking-widest text-white group-hover:text-white transition-colors" style="color: var(--t-main);">${cat.title}</h3>
-                                <p class="text-xs text-slate-400">${cat.desc}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-2 pt-2 border-t border-[#1E293B] flex justify-between items-center">
-                        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Level ${currentLvl} <span class="text-slate-500 font-normal">/ 100</span></span>
-                        <span class="text-xs font-bold" style="color: var(--t-main);">${prog} / ${DRILLS_PER_LEVEL} XP</span>
+                    <div class="text-4xl">${cat.icon}</div>
+                    <h2 class="text-lg font-bold text-white tracking-widest uppercase">${cat.title}</h2>
+                    <div class="text-xs bg-black/60 px-3 py-1 rounded text-slate-300 border border-[#1E293B]">
+                        LVL ${lvl} <span class="mx-1">|</span> ${completed} XP
                     </div>
                 `;
                 container.appendChild(card);
-            }
-            document.getElementById('total-xp-display').innerText = progressData.totalXP;
+            });
+            document.getElementById('total-xp-display').innerText = progressData.totalXP || 0;
+            document.getElementById('streak-display').innerText = progressData._streak || 0;
+            document.getElementById('total-practices-display').innerText = getTotalPractices();
+            
+            // Change the main theme color slightly each visit for a fresh feel
+            document.documentElement.style.setProperty('--t-main', randomColor);
         }
 
         function showDashboard() {
@@ -3928,6 +4246,7 @@
             let prog = progressData[currentCategory] % DRILLS_PER_LEVEL;
             let percent = (prog / DRILLS_PER_LEVEL) * 100;
             document.getElementById('game-progress-text').innerText = prog;
+            document.getElementById('game-progress-max').innerText = DRILLS_PER_LEVEL;
             document.getElementById('game-progress-bar').style.width = percent + '%';
         }
 
@@ -4002,16 +4321,22 @@
             let optsDiv = document.getElementById('chat-options');
             optsDiv.innerHTML = '';
             
-            let shuffledOpts = shuffle(step.opts.map((txt, idx) => ({txt, isCorrect: idx === step.correctIdx})));
+            let normalizedOpts = step.opts.map((item, idx) => {
+                let text = typeof item === 'object' ? item.t : item;
+                let isCorrect = typeof item === 'object' ? (item.correct === true) : (idx === step.correctIdx);
+                return { text: text, isCorrect: isCorrect };
+            });
+            
+            let shuffledOpts = shuffle(normalizedOpts);
             
             shuffledOpts.forEach(opt => {
                 let btn = document.createElement('button');
                 btn.className = "btn-scenario w-full p-3 text-left text-white font-sans rounded text-sm";
-                btn.innerText = opt.txt;
+                btn.innerText = opt.text;
                 btn.onclick = () => {
                     optsDiv.innerHTML = ''; // FIX: Prevent rapid-click double execution race condition
                     if(opt.isCorrect) {
-                        document.getElementById('chat-history').innerHTML += `<div class="chat-bubble-user animate-pop">${opt.txt}</div>`;
+                        document.getElementById('chat-history').innerHTML += `<div class="chat-bubble-user animate-pop">${opt.text}</div>`;
                         currentStoryIndex++;
                         if(currentStoryIndex < currentStoryObj.steps.length) {
                             setTimeout(() => {
@@ -4038,7 +4363,9 @@
             resetGameUI();
         }
 
+        
         function showFeedback(isCorrect, titleTxt, msgTxt, retryFunc) {
+            playSound(isCorrect);
             const feedback = document.getElementById('feedback-block');
             document.getElementById('action-check').classList.add('hidden-element');
             
@@ -4051,6 +4378,29 @@
             let btnContinue = document.getElementById('btn-continue');
             const robot = document.getElementById('robot-mascot');
 
+            // --- KEYWORD EXPLANATION LOGIC ---
+            let tipHtml = '';
+            let sentenceToCheck = (currentExercise && currentExercise.target) ? currentExercise.target : '';
+            if(!sentenceToCheck && currentExercise && currentExercise.opts) {
+                // Get the text of the correct option for scenarios
+                let correctOpt = currentExercise.opts.find(o => o.correct === true);
+                if(correctOpt) sentenceToCheck = correctOpt.t;
+            }
+            if(sentenceToCheck) {
+                for (let key in techDictionary) {
+                    // Match whole word case-insensitive
+                    const regex = new RegExp('\\b' + key + '\\b', 'i');
+                    if (regex.test(sentenceToCheck)) {
+                        tipHtml = `<div class="mt-3 pt-3 border-t border-slate-700/50 text-sm">
+                            <span class="text-slate-400">💡 Tech Vocab:</span> 
+                            <strong style="color: var(--t-main);">${key}</strong> - ${techDictionary[key]}
+                        </div>`;
+                        break; // Just show one tip
+                    }
+                }
+            }
+            // ---------------------------------
+
             if (isCorrect) {
                 document.getElementById('game-card').classList.add('animate-pop');
                 document.getElementById('game-card').style.borderColor = "var(--t-main)";
@@ -4059,7 +4409,7 @@
                 feedback.style.boxShadow = "0 0 20px var(--t-main-glow)";
                 
                 document.getElementById('feedback-title').innerHTML = `<span style="color: var(--t-main);">${titleTxt}</span>`;
-                document.getElementById('feedback-msg').innerText = msgTxt;
+                document.getElementById('feedback-msg').innerHTML = msgTxt + tipHtml;
                 btnContinue.style.backgroundColor = "var(--t-main)";
                 btnContinue.onclick = () => awardXPAndNext();
                 
@@ -4076,8 +4426,8 @@
                 feedback.style.borderColor = "#EF4444";
                 feedback.style.boxShadow = "0 0 20px rgba(239,68,68,0.5)";
                 
-                document.getElementById('feedback-title').innerHTML = `<span class='text-red-500'>${titleTxt}</span>`;
-                document.getElementById('feedback-msg').innerText = msgTxt;
+                document.getElementById('feedback-title').innerHTML = `<span class="text-red-500">${titleTxt}</span>`;
+                document.getElementById('feedback-msg').innerHTML = msgTxt + tipHtml;
                 btnContinue.style.backgroundColor = "#EF4444";
                 
                 robot.innerText = '💥🤖';
@@ -4093,9 +4443,10 @@
         }
 
         function awardXPAndNext() {
+            updateStreak();
             progressData[currentCategory] = (progressData[currentCategory] || 0) + 1;
             progressData.totalXP += (generators[currentCategory].type === 'story') ? 50 : 10;
-            localStorage.setItem('techEnglishFinal_v6', JSON.stringify(progressData));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
             
             if(progressData[currentCategory] % DRILLS_PER_LEVEL === 0 && progressData[currentCategory] > 0) {
                 alert(`🎉 SYSTEM UPGRADE: You reached Level ${Math.floor(progressData[currentCategory] / DRILLS_PER_LEVEL) + 1} in ${generators[currentCategory].title}! 🎉`);
